@@ -13,7 +13,7 @@ from datetime import datetime
 import plotly.graph_objects as go
 from Bitcoin import BitC_Predictor
 from Ethereum import Ethereum_Predictor
-from Tether import Tether_Prediction
+from Models.Tether import Tether_Predictior
 from USDCoin import usdC__Predictor
 
 class EnsemblePredictor:
@@ -24,7 +24,7 @@ class EnsemblePredictor:
         self.models = {
             'BTC': BitC_Predictor(look_back=look_back, test_size=test_size),
             'ETH': Ethereum_Predictor(look_back=look_back, test_size=test_size),
-            'USDT': Tether_Prediction(look_back=look_back, test_size=test_size),
+            'USDT': Tether_Predictior(look_back=look_back, test_size=test_size),
             'USDC': usdC__Predictor(look_back=look_back, test_size=test_size)
         }
         self.model = None
