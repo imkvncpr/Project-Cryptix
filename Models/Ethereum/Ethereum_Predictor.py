@@ -5,9 +5,17 @@ import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from keras.models import Sequential
-from keras.layers import LSTM, Dense, Dropout
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+import tensorflow as tf
+Model = tf.keras.models.Model
+Sequential = tf.keras.models.Sequential
+Dense = tf.keras.layers.Dense
+LSTM = tf.keras.layers.LSTM
+Concatenate = tf.keras.layers.Concatenate
+Input = tf.keras.layers.Input
+Dropout = tf.keras.layers.Dropout
+EarlyStopping = tf.keras.callbacks.EarlyStopping
+ModelCheckpoint = tf.keras.callbacks.ModelCheckpoint
+
 import plotly.graph_objects as go
 import logging
 from typing import Tuple, Dict, Optional
@@ -48,7 +56,7 @@ class EthereumPricePredictor:
         self.last_sequence = X[-1:]
         return X, y
 
-    def create_model(self) -> Sequential:
+    def create_model(self) -> tf.keras.models.Sequential:
         model = Sequential([
             LSTM(100, return_sequences=True, input_shape=(self.look_back, 5)),
             Dropout(0.3),
@@ -60,7 +68,7 @@ class EthereumPricePredictor:
         model.compile(optimizer='adam', loss='mean_squared_error')
         return model
 
-    def train_model(self, X: np.ndarray, y: np.ndarray) -> Tuple[Sequential, Dict[str, float]]:
+    def train_model(self, X: np.ndarray, y: np.ndarray) -> Tuple[tf.keras.models.Sequential:, Dict[str, float]]:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=self.test_size, random_state=42
         )

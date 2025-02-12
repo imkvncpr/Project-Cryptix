@@ -4,9 +4,16 @@ import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from keras.models import Sequential
-from keras.layers import LSTM, Dense, Dropout
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+import tensorflow as tf
+Model = tf.keras.models.Model
+Sequential = tf.keras.models.Sequential
+Dense = tf.keras.layers.Dense
+LSTM = tf.keras.layers.LSTM
+Concatenate = tf.keras.layers.Concatenate
+Input = tf.keras.layers.Input
+Dropout = tf.keras.layers.Dropout
+EarlyStopping = tf.keras.callbacks.EarlyStopping
+ModelCheckpoint = tf.keras.callbacks.ModelCheckpoint
 from scikeras.wrappers import KerasRegressor
 import plotly.graph_objects as go
 import logging
@@ -97,7 +104,7 @@ class CryptoPricePredictor:
 
     def create_model(self, 
                     neurons: int = 100,
-                    dropout: float = 0.3) -> Sequential:
+                    dropout: float = 0.3) -> tf.keras.models.Sequential:
         """
         Create LSTM model architecture.
         
@@ -128,7 +135,7 @@ class CryptoPricePredictor:
                    X: np.ndarray,
                    y: np.ndarray,
                    optimize_hyperparameters: bool = False,
-                   **kwargs) -> Tuple[Sequential, Dict[str, float]]:
+                   **kwargs) -> Tuple[tf.keras.models.Sequential, Dict[str, float]]:
         """
         Train the LSTM model with optional hyperparameter optimization.
         
@@ -233,7 +240,7 @@ class CryptoPricePredictor:
             logger.error(f"Error making future predictions: {str(e)}")
             raise
 
-    def _optimize_hyperparameters(self, X_train: np.ndarray, y_train: np.ndarray) -> Sequential:
+    def _optimize_hyperparameters(self, X_train: np.ndarray, y_train: np.ndarray) -> tf.keras.models.Sequential:
         """
         Perform hyperparameter optimization using RandomizedSearchCV.
         """

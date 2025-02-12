@@ -3,10 +3,18 @@ import pandas as pd
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
+import tensorflow as tf
+Model = tf.keras.models.Model
+Sequential = tf.keras.models.Sequential
+Dense = tf.keras.layers.Dense
+LSTM = tf.keras.layers.LSTM
+Concatenate = tf.keras.layers.Concatenate
+Input = tf.keras.layers.Input
+Dropout = tf.keras.layers.Dropout
+EarlyStopping = tf.keras.callbacks.EarlyStopping
+ModelCheckpoint = tf.keras.callbacks.ModelCheckpoint
+Adam = tf.keras.optimizers.Adam
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 
