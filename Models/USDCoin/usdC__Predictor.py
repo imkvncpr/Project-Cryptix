@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 # Changed from relative import to absolute import
-from CryptoPricePredictor import CryptoPricePredictor
+from Models.CryptoPricePredictor import CryptoPricePredictor
 
 class usdC__Predictor(CryptoPricePredictor):
     def __init__(self, look_back: int = 60, test_size: float = 0.2):

@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Changed from relative import to absolute import
-from CryptoPricePredictor import CryptoPricePredictor
+from Models.CryptoPricePredictor import CryptoPricePredictor
 
 class Tether_Prediction(CryptoPricePredictor):
     def __init__(self, look_back: int = 60, test_size: float = 0.2):
