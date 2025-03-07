@@ -1,8 +1,11 @@
 import os
 import sys
-# Add the parent directory to system path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Add the project root to sys.path (two levels up from this file)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, project_root)
+
+# Now we can import the base class
 from Models.CryptoPricePredictor import CryptoPricePredictor
 
 class BitC_Predictor(CryptoPricePredictor):

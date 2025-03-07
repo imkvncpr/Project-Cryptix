@@ -1,7 +1,10 @@
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-# Changed from relative import to absolute import
+# Add the project root to Python path (two levels up from this file)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, project_root)
+
+# Now use absolute import
 from Models.CryptoPricePredictor import CryptoPricePredictor
 
 class Tether_Prediction(CryptoPricePredictor):

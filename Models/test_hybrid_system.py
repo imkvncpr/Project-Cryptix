@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 from datetime import datetime, timedelta
 import matplotlib.dates as mdates
+import time
+import random
 
 # Add project root to path
 project_root = os.path.abspath(os.path.dirname(__file__))
@@ -18,9 +20,15 @@ from Models.Hybrid_Filter.Hybrid_Predictor import HybridPredictor
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def fetch_crypto_data(period='1y'):
+def fetch_crypto_data(period='1y', use_cache=True, retry_delay=5, max_retries=3):
     """
-    Fetch historical data for multiple cryptocurrencies
+    Fetch historical data for multiple cryptocurrencies with retry logic and caching
+    
+    Args:
+        period (str): Time period to fetch ('1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max')
+        use_cache (bool): Whether to use cached data if available
+        retry_delay (int): Initial delay in seconds before retrying after rate limit
+        max_retries (int): Maximum number of retry attempts
     """
     print(f"Fetching {period} of historical data...")
     
@@ -31,33 +39,128 @@ def fetch_crypto_data(period='1y'):
         'USDC': 'USDC-USD'
     }
     
+    # Create cache directory if it doesn't exist
+    cache_dir = os.path.join(os.getcwd(), "data_cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
     data = {}
     for crypto, symbol in crypto_symbols.items():
-        try:
-            print(f"Fetching {crypto} data...")
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(period=period)
-            
-            # Ensure required columns exist
-            required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-            if all(col in df.columns for col in required_columns):
-                # Rename columns to match expected format
-                df = df.rename(columns={
-                    'Open': 'open',
-                    'High': 'high',
-                    'Low': 'low',
-                    'Close': 'close',
-                    'Volume': 'volume'
-                })
+        # Define cache file path
+        cache_file = os.path.join(cache_dir, f"{symbol}_{period}.csv")
+        
+        # Check for cached data if enabled
+        if use_cache and os.path.exists(cache_file):
+            try:
+                df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
                 data[crypto] = df
-                print(f"  ✓ {len(df)} rows fetched for {crypto}")
-            else:
-                missing = [col for col in required_columns if col not in df.columns]
-                print(f"  ✗ Missing columns for {crypto}: {missing}")
-        except Exception as e:
-            print(f"  ✗ Error fetching {crypto}: {e}")
+                print(f"  ✓ Loaded cached data for {crypto} ({len(df)} rows)")
+                continue  # Skip to next crypto
+            except Exception as e:
+                print(f"  ✗ Error loading cached data for {crypto}: {e}")
+        
+        # If no cache or loading cache failed, fetch from Yahoo Finance
+        print(f"Fetching {crypto} data...")
+        
+        # Implement retry logic with exponential backoff
+        retries = 0
+        current_delay = retry_delay
+        success = False
+        
+        while retries <= max_retries and not success:
+            try:
+                # Add a small random delay to help avoid rate limits
+                jitter = random.uniform(0.5, 2.0)
+                time.sleep(jitter)
+                
+                ticker = yf.Ticker(symbol)
+                df = ticker.history(period=period)
+                
+                # Ensure required columns exist
+                required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+                if all(col in df.columns for col in required_columns) and not df.empty:
+                    # Rename columns to match expected format
+                    df = df.rename(columns={
+                        'Open': 'open',
+                        'High': 'high',
+                        'Low': 'low',
+                        'Close': 'close',
+                        'Volume': 'volume'
+                    })
+                    
+                    # Save to cache
+                    if use_cache:
+                        df.to_csv(cache_file)
+                        print(f"  ✓ Saved {crypto} data to cache")
+                    
+                    data[crypto] = df
+                    print(f"  ✓ {len(df)} rows fetched for {crypto}")
+                    success = True
+                else:
+                    missing = [col for col in required_columns if col not in df.columns]
+                    if df.empty:
+                        missing = ["Empty dataframe returned"]
+                    print(f"  ✗ Missing data for {crypto}: {missing}")
+                    retries += 1
+                    
+                # Add a significant delay before fetching the next cryptocurrency
+                if not crypto == list(crypto_symbols.keys())[-1]:  # If not the last crypto
+                    delay = random.uniform(10, 15)  # Random delay between 10-15 seconds
+                    print(f"  → Waiting {delay:.1f} seconds before next request...")
+                    time.sleep(delay)
+            
+            except Exception as e:
+                err_msg = str(e)
+                retries += 1
+                
+                if "Too Many Requests" in err_msg and retries <= max_retries:
+                    print(f"  ⚠ Rate limited for {crypto}. Retry {retries}/{max_retries} in {current_delay} seconds...")
+                    time.sleep(current_delay)
+                    current_delay *= 2  # Exponential backoff
+                else:
+                    print(f"  ✗ Error fetching {crypto}: {e}")
+                    if retries <= max_retries:
+                        print(f"  → Retry {retries}/{max_retries} in {current_delay} seconds...")
+                        time.sleep(current_delay)
+                        current_delay *= 1.5
+                    else:
+                        break
     
     return data
+
+def download_data_bulk(period='1y'):
+    """
+    Alternative approach to download all data at once using yf.download
+    with multiple tickers, which may avoid some rate limiting issues.
+    """
+    print(f"Bulk downloading {period} of historical data...")
+    
+    tickers = ['BTC-USD', 'ETH-USD', 'USDT-USD', 'USDC-USD']
+    ticker_str = ' '.join(tickers)
+    
+    try:
+        # Download all at once
+        df = yf.download(ticker_str, period=period, group_by='ticker')
+        
+        # Process the multi-level dataframe
+        data = {}
+        for ticker in tickers:
+            if ticker in df.columns:
+                # Extract data for this ticker
+                ticker_data = df[ticker].copy()
+                if not ticker_data.empty:
+                    # Rename columns to lowercase
+                    ticker_data.columns = [col.lower() for col in ticker_data.columns]
+                    # Map to crypto name
+                    crypto = ticker.split('-')[0]
+                    data[crypto] = ticker_data
+                    print(f"  ✓ {len(ticker_data)} rows fetched for {crypto}")
+            else:
+                print(f"  ✗ No data found for {ticker}")
+                
+        return data
+    except Exception as e:
+        print(f"  ✗ Error in bulk download: {e}")
+        return {}
 
 def visualize_predictions(data, results, crypto='BTC'):
     """
@@ -192,8 +295,13 @@ def calculate_performance(data, results, crypto='BTC'):
 def main():
     print("\n===== Testing Hybrid Prediction System =====\n")
     
-    # 1. Fetch historical data
-    data = fetch_crypto_data(period='1y')
+    # 1. Try to fetch historical data with retry logic and caching
+    data = fetch_crypto_data(period='1y', use_cache=True, retry_delay=5, max_retries=3)
+    
+    # 2. If the standard approach fails, try bulk download
+    if not data:
+        print("\nIndividual fetching failed. Trying bulk download...\n")
+        data = download_data_bulk(period='1y')
     
     if not data:
         print("No data fetched. Exiting.")
@@ -201,25 +309,25 @@ def main():
     
     print(f"\nData fetched successfully for {len(data)} cryptocurrencies.\n")
     
-    # 2. Initialize hybrid predictor
+    # 3. Initialize hybrid predictor
     print("Initializing Hybrid Predictor...")
     predictor = HybridPredictor(look_back=60)
     
-    # 3. Generate predictions and signals
+    # 4. Generate predictions and signals
     print("Generating predictions and signals...")
     results = predictor.predict(data)
     
-    # 4. Generate report
+    # 5. Generate report
     print("\n===== Prediction Report =====\n")
     report = predictor.generate_report(results)
     print(report)
     
-    # 5. Visualize results
+    # 6. Visualize results
     print("\n===== Creating Visualizations =====\n")
     for crypto in results:
         visualize_predictions(data, results, crypto)
     
-    # 6. Calculate performance
+    # 7. Calculate performance
     print("\n===== Performance Metrics =====\n")
     performance_metrics = []
     for crypto in results:
